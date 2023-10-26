@@ -1,0 +1,4 @@
+pod = "https://solidos.solidcommunity.net/"
+idp = "https://solidcommunity.net"
+username = "your-user-name"
+password = "your-password"

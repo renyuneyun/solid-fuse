@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "solid-fuse"
+version = "0.1.0"
+description = "A FUSE filesystem for Solid (Social Linked Data) Pod storage"
+authors = ["renyuneyun (Rui Zhao) <renyuneyun@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pyfuse3 = "^3.3.0"
+trio = "^0.22.2"
+solid-file = "0.1.1"
+tomlkit = "^0.12.1"
+
+
+[tool.poetry.group.dev.dependencies]
+ipython = "^8.16.1"
+ipdb = "^0.13.13"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
