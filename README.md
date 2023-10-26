@@ -94,7 +94,7 @@ Note: creating linked files is impossible for a filesystem, because this notion 
 
 ## License
 
-Copyright [2023] [Rui Zhao (renyuneyun)]
+Copyright 2023 Rui Zhao (renyuneyun)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
