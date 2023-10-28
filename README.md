@@ -1,4 +1,4 @@
-SoLiD FUSE
+# SoLiD FUSE
 - - - - - -
 
 SolidFUSE is a FUSE (Filesystem in User Space) implementation to read/write to your [Solid (Social Linked Data) Pods](https://solidproject.org/).  
@@ -93,7 +93,7 @@ Note: creating linked files is impossible for a filesystem, because this notion 
 - [x] Configuration file
 - [ ] Command-line arguments
 - [ ] Multiple Pods
-- [ ] Unmount when stopped
+- [x] Unmount when stopped
 
 ### Development
 
