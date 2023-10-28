@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 class InternalMappingNotFoundException(Exception):
     pass
 
+
 class LocalInfoNotFoundException(Exception):
     pass
 
@@ -38,7 +39,7 @@ class UriWrapper:
 
     def parent(self):
         rep = urllib.parse.urlparse(self.uri)
-        rep = rep._replace(path=str(PurePath(rep.path).parent / '/'))  # FIXME: Error, property cannot be edited
+        rep = rep._replace(path=str(PurePath(rep.path).parent / '/'))
         return UriWrapper(urllib.parse.urlunparse(rep))
 
     def child(self, child_path):
@@ -88,12 +89,12 @@ class ResourceLinkHelper:
         self.inode_count += 1
         return self.inode_count
 
-    def set_fh(self, inode):
+    def _set_fh(self, inode):
         self._file_handler_map[inode] = inode
 
     def fh(self, inode):
         if inode not in self._file_handler_map:
-            self.set_fh(inode)
+            self._set_fh(inode)
         return self._file_handler_map[inode]
 
     def insert(self, uri, inode=None):
@@ -102,11 +103,15 @@ class ResourceLinkHelper:
         fh = self.fh(inode)
         self._uri_map[fh] = uri
 
-    def get_uri_from_inode(self, inode):
-        return self._uri_map[self.fh(inode)]
-
-    def get_uri_from_fh(self, fh):
+    def _get_uri_from_fh(self, fh):
         return self._uri_map[fh]
+
+    def get_uri(self, inode=None, fh=None, uri=None):
+        if inode:
+            fh = self.fh(inode)
+        if fh:
+            uri = self._get_uri_from_fh(fh)
+        return uri
 
     def get_inode_from_uri(self, uri):
         for k, v in self._uri_map.items():
@@ -131,19 +136,17 @@ class ResourceInfoLinkWrapper:
         self._resource_contant_cache = ResourceInfoCache()
 
         self._resource_link_helper.insert(pod, pyfuse3.ROOT_INODE)
-        self.retrieve_and_cache(pod)  # Initialization needs optimization
+        self.retrieve_and_cache(pod)  # TODO: Initialization needs optimization
 
     def retrieve_and_cache(self, uri, is_container=True):
         log.debug(f"retrieve_and_cache({uri})")
         folder_info = self._api.read_folder(uri)
         self._container_info_cache.put(uri, folder_info)
         for sub in folder_info.folders:
-            log.debug(f"Sub-dir-info type: {sub.itemType}, of {sub.url}")
             self._resource_link_helper.insert(sub.url)
             self._resource_info_cache.put(sub.url, sub)
 
         for sub in folder_info.files:
-            log.debug(f"Sub-res-info type: {sub.itemType}, of {sub.url}")
             inode = self._resource_link_helper.new_inode()
             self._resource_link_helper.insert(sub.url, inode)
             self._resource_info_cache.put(sub.url, sub)
@@ -152,9 +155,6 @@ class ResourceInfoLinkWrapper:
     def retrieve_and_cache_resource(self, uri):
         log.debug(f"retrieve_and_cache_resource({uri})")
         response = self._api.get(uri)
-        # TODO: Handle binary data
-        # data = response.read()
-        # self._resource_contant_cache.put(uri, data)
         data = response.read()
         self._resource_contant_cache.put(uri, data)
 
@@ -169,10 +169,7 @@ class ResourceInfoLinkWrapper:
         return self._resource_link_helper.fh(inode)
 
     def get(self, inode=None, fh=None, uri=None, from_info_cache=True):
-        if inode:
-            fh = self._resource_link_helper.fh(inode)
-        if fh:
-            uri = self._resource_link_helper.get_uri_from_fh(fh)
+        uri = self._resource_link_helper.get_uri(inode, fh, uri)
         if from_info_cache:
             if inode == pyfuse3.ROOT_INODE:
                 return self._container_info_cache.get(uri)
@@ -180,7 +177,7 @@ class ResourceInfoLinkWrapper:
                 info = self._resource_info_cache.get(uri)
                 return info
             raise LocalInfoNotFoundException()
-            
+
         if not self._container_info_cache.has(uri):
             if UriWrapper(uri).is_container():
                 self.retrieve_and_cache(uri)
@@ -191,10 +188,7 @@ class ResourceInfoLinkWrapper:
         return self._container_info_cache.get(uri)
 
     def get_resource(self, inode=None, fh=None, uri=None):
-        if inode:
-            fh = self._resource_link_helper.fh(inode)
-        if fh:
-            uri = self._resource_link_helper.get_uri_from_fh(fh)
+        uri = self._resource_link_helper.get_uri(inode, fh, uri)
         if not self._resource_contant_cache.has(uri):
             self.retrieve_and_cache_resource(uri)
         content = self._resource_contant_cache.get(uri)
@@ -216,10 +210,7 @@ class ResourceInfoLinkWrapper:
         return len(content)
 
     def put_resource(self, data, inode=None, fh=None, uri=None):
-        if inode:
-            fh = self._resource_link_helper.fh(inode)
-        if fh:
-            uri = self._resource_link_helper.get_uri_from_fh(fh)
+        uri = self._resource_link_helper.get_uri(inode, fh, uri)
         mtype, encoding = mimetypes.guess_type(uri)
         self._api.put_file(uri, data, mtype)
 
