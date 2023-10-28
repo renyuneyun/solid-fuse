@@ -80,9 +80,11 @@ Note: creating linked files is impossible for a filesystem, because this notion 
 ### Performance
 
 - [x] Local (in-memory) caching
-- [ ] On-demand caching (do not cache everything in the beginning)
+- [x] On-demand caching (do not download everything in the beginning)
 - [ ] Cache expiration
 - [ ] Really async and lock
+    - [ ] File size async
+    - [ ] Async with lock
 
 ### Misc features
 
@@ -94,6 +96,8 @@ Note: creating linked files is impossible for a filesystem, because this notion 
 ### Development
 
 - [ ] Packaging
+- [ ] Extract high-level interfaces for wrapping low-level FUSE interfaces
+    - [ ] Maybe release as a separate library?
 
 ## License
 

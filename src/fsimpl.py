@@ -25,6 +25,9 @@ log = logging.getLogger(__name__)
 class InternalMappingNotFoundException(Exception):
     pass
 
+class LocalInfoNotFoundException(Exception):
+    pass
+
 
 class UriWrapper:
     def __init__(self, uri):
@@ -134,6 +137,11 @@ class ResourceInfoLinkWrapper:
         log.debug(f"retrieve_and_cache({uri})")
         folder_info = self._api.read_folder(uri)
         self._container_info_cache.put(uri, folder_info)
+        for sub in folder_info.folders:
+            log.debug(f"Sub-dir-info type: {sub.itemType}, of {sub.url}")
+            self._resource_link_helper.insert(sub.url)
+            self._resource_info_cache.put(sub.url, sub)
+
         for sub in folder_info.files:
             log.debug(f"Sub-res-info type: {sub.itemType}, of {sub.url}")
             inode = self._resource_link_helper.new_inode()
@@ -160,14 +168,19 @@ class ResourceInfoLinkWrapper:
         self.get_resource(inode, fh, uri)
         return self._resource_link_helper.fh(inode)
 
-    def get(self, inode=None, fh=None, uri=None):
+    def get(self, inode=None, fh=None, uri=None, from_info_cache=True):
         if inode:
             fh = self._resource_link_helper.fh(inode)
         if fh:
             uri = self._resource_link_helper.get_uri_from_fh(fh)
-        if self._resource_info_cache.has(uri):
-            info = self._resource_info_cache.get(uri)
-            return info
+        if from_info_cache:
+            if inode == pyfuse3.ROOT_INODE:
+                return self._container_info_cache.get(uri)
+            if self._resource_info_cache.has(uri):
+                info = self._resource_info_cache.get(uri)
+                return info
+            raise LocalInfoNotFoundException()
+            
         if not self._container_info_cache.has(uri):
             if UriWrapper(uri).is_container():
                 self.retrieve_and_cache(uri)
@@ -218,13 +231,14 @@ class SolidFs(pyfuse3.Operations):
             pod, idp, username, password)
 
     async def getattr(self, inode, ctx=None):
+        log.debug(f"getattr({inode}, {ctx})")
         entry = pyfuse3.EntryAttributes()
         # if inode == pyfuse3.ROOT_INODE:
         #     entry.st_mode = (stat.S_IFDIR | 0o755)
         #     entry.st_size = 0
         # else:
-        info = self._resource_info_link_wrapper.get(inode)
-        if isinstance(info, FolderData):
+        info = self._resource_info_link_wrapper.get(inode, from_info_cache=True)
+        if UriWrapper(info.url).is_container():
             entry.st_mode = (stat.S_IFDIR | 0o755)
             entry.st_size = 0
         else:
@@ -246,14 +260,14 @@ class SolidFs(pyfuse3.Operations):
         if name == '.':
             return await self.getattr(parent_inode)
         if name == '..':
-            folder_data = self._resource_info_link_wrapper.get(parent_inode)
+            folder_data = self._resource_info_link_wrapper.get(parent_inode, from_info_cache=True)
             parent_url = UriWrapper(folder_data.url).parent().uri
             try:
                 parent_inode = self._resource_info_link_wrapper.get_inode(parent_url)
                 return await self.getattr(parent_inode)
             except InternalMappingNotFoundException:
                 raise pyfuse3.FUSEError(errno.ENOENT)
-        parent_folder_data = self._resource_info_link_wrapper.get(parent_inode)
+        parent_folder_data = self._resource_info_link_wrapper.get(parent_inode, from_info_cache=True)
         target_url = UriWrapper(parent_folder_data.url).child(name).uri
         try:
             target_inode = self._resource_info_link_wrapper.get_inode(target_url)
@@ -270,7 +284,7 @@ class SolidFs(pyfuse3.Operations):
 
     async def readdir(self, fh, start_id, token):
         log.debug(f"readdir({fh}, {start_id}, {token})")
-        folder_data = self._resource_info_link_wrapper.get(fh=fh)
+        folder_data = self._resource_info_link_wrapper.get(fh=fh, from_info_cache=False)
         if start_id < len(folder_data.folders) + len(folder_data.files):
             for i, sub_data in enumerate(folder_data.folders):
                 if start_id and i < start_id: continue
