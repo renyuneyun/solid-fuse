@@ -64,13 +64,14 @@ def main():
                      config.idp, config.username, config.password)
     fuse_options = set(pyfuse3.default_options)
     fuse_options.add('fsname=solidfuse')
+    fuse_options.discard('default_permissions')
     if options.debug_fuse:
         fuse_options.add('debug')
     pyfuse3.init(testfs, options.mountpoint, fuse_options)
     try:
         trio.run(pyfuse3.main)
     except:
-        pyfuse3.close(unmount=False)
+        pyfuse3.close(unmount=True)
         raise
 
     pyfuse3.close()

@@ -45,7 +45,7 @@ poetry run src/solid-fuse.py config.toml /mnt/solid
 
 This project is in early-stage. Breaking changes may be expected with every update.
 
-SolidFUSE use [`solid-file-python`](https://github.com/twonote/solid-file-python) for authentication and performing operations (`:)`). However, there are lots of things that is yet to implement (`:(`). At the moment, SolidFUSE only supports NSS.
+SolidFUSE use [`solid-file-python`](https://github.com/twonote/solid-file-python) for authentication and performing operations (`:)`). However, there are lots of things that is yet to implement (`:(`). At the moment, SolidFUSE only supports NSS, due to the lack of an implementation of DPoP in Python (see [this issue](https://github.com/twonote/solid-file-python/pull/33)).
 
 ## Features / TODOs
 
@@ -58,7 +58,10 @@ SolidFUSE use [`solid-file-python`](https://github.com/twonote/solid-file-python
 - [x] Read file contents
     - [x] Text files
     - [x] Binary files
-- [ ] Edit files
+- [ ] Update cache
+    - [ ] Automatically update cache After modification
+    - [ ] Automatically update cache by time-out
+- [x] Edit files
 - [ ] Create files
 - [ ] Delete files
 - [ ] Show linked files

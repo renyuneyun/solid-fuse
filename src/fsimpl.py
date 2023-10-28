@@ -7,6 +7,8 @@ import logging
 import urllib.parse
 from pathlib import PurePath
 
+import mimetypes
+
 from solid.auth import Auth
 from solid.solid_api import SolidAPI
 
@@ -20,7 +22,7 @@ log = logging.getLogger(__name__)
 # class MyFolderInfo:
 
 
-class NotFoundException(Exception):
+class InternalMappingNotFoundException(Exception):
     pass
 
 
@@ -109,7 +111,7 @@ class ResourceLinkHelper:
                 for k2, v2 in self._file_handler_map.items():
                     if v2 == k:
                         return k2
-        raise NotFoundException()
+        raise InternalMappingNotFoundException()
 
     def has_inode(self, inode):
         return inode in self._file_handler_map
@@ -186,7 +188,7 @@ class ResourceInfoLinkWrapper:
         return content
 
     def get_inode(self, uri):
-        self._resource_link_helper.get_inode_from_uri(uri)
+        return self._resource_link_helper.get_inode_from_uri(uri)
 
     def gen_inode_for_uri(self, uri):
         inode = self._resource_link_helper.new_inode()
@@ -199,6 +201,14 @@ class ResourceInfoLinkWrapper:
     def size_of_resource(self, inode=None, fh=None, uri=None):
         content = self.get_resource(inode, fh, uri)
         return len(content)
+
+    def put_resource(self, data, inode=None, fh=None, uri=None):
+        if inode:
+            fh = self._resource_link_helper.fh(inode)
+        if fh:
+            uri = self._resource_link_helper.get_uri_from_fh(fh)
+        mtype, encoding = mimetypes.guess_type(uri)
+        self._api.put_file(uri, data, mtype)
 
 
 class SolidFs(pyfuse3.Operations):
@@ -241,14 +251,14 @@ class SolidFs(pyfuse3.Operations):
             try:
                 parent_inode = self._resource_info_link_wrapper.get_inode(parent_url)
                 return await self.getattr(parent_inode)
-            except NotFoundException:
+            except InternalMappingNotFoundException:
                 raise pyfuse3.FUSEError(errno.ENOENT)
         parent_folder_data = self._resource_info_link_wrapper.get(parent_inode)
         target_url = UriWrapper(parent_folder_data.url).child(name).uri
         try:
             target_inode = self._resource_info_link_wrapper.get_inode(target_url)
             return await self.getattr(target_inode)
-        except NotFoundException:
+        except InternalMappingNotFoundException:
             raise pyfuse3.FUSEError(errno.ENOENT)
 
     async def opendir(self, inode, ctx):
@@ -282,10 +292,11 @@ class SolidFs(pyfuse3.Operations):
     #         raise pyfuse3.FUSEError(errno.EINVAL)
 
     async def open(self, inode, flags, ctx):
+        log.debug(f"open({inode}, {flags:b}, {ctx})")
         if not self._resource_info_link_wrapper.has_inode(inode):
             raise pyfuse3.FUSEError(errno.ENOENT)
-        if flags & os.O_RDWR or flags & os.O_WRONLY:
-            raise pyfuse3.FUSEError(errno.EACCES)
+        # if flags & os.O_RDWR or flags & os.O_WRONLY:
+        #     raise pyfuse3.FUSEError(errno.EACCES)
         fh = self._resource_info_link_wrapper.prepare_resource(inode)
         return pyfuse3.FileInfo(fh=fh)
 
@@ -293,3 +304,20 @@ class SolidFs(pyfuse3.Operations):
         log.debug(f"read({fh}, {off}, {size})")
         data = self._resource_info_link_wrapper.get_resource(fh=fh)
         return data[off:off+size]
+
+    async def access(self, inode, mode, ctx):
+        log.debug(f"access({inode}, {mode}, {ctx})")
+        return True
+
+    async def write(self, fh, offset, buf):
+        log.debug(f"write({fh}, {offset}, {buf})")
+        # try:
+        data = self._resource_info_link_wrapper.get_resource(fh=fh)
+        # except InternalMappingNotFoundException:
+        #     data = b''
+
+        data = data[:offset] + buf + data[offset+len(buf):]
+
+        self._resource_info_link_wrapper.put_resource(data, fh=fh)
+
+        return len(buf)
