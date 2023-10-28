@@ -10,7 +10,7 @@ from pathlib import PurePath
 import mimetypes
 
 from solid.auth import Auth
-from solid.solid_api import SolidAPI
+from solid.solid_api import SolidAPI, WriteOptions
 
 from solid.solid_api import FolderData
 
@@ -27,6 +27,10 @@ class InternalMappingNotFoundException(Exception):
 
 
 class LocalInfoNotFoundException(Exception):
+    pass
+
+
+class RemoteOperationFailureException(Exception):
     pass
 
 
@@ -214,6 +218,16 @@ class ResourceInfoLinkWrapper:
         mtype, encoding = mimetypes.guess_type(uri)
         self._api.put_file(uri, data, mtype)
 
+    def create(self, uri, parent_url):
+        if UriWrapper(uri).is_container():
+            response = self._api.create_folder(uri)
+        else:
+            mtype, encoding = mimetypes.guess_type(uri)
+            response = self._api.create_file(uri, b'', mtype, WriteOptions(with_acl=False))  # TODO: Remove explicit WriteOptions after upstream fix
+        if response.is_error:
+            raise RemoteOperationFailureException()
+        self.retrieve_and_cache(parent_url, is_container=True)
+
 
 class SolidFs(pyfuse3.Operations):
     def __init__(self, pod, idp=None, username=None, password=None):
@@ -245,6 +259,9 @@ class SolidFs(pyfuse3.Operations):
         entry.st_ino = inode
 
         return entry
+
+    async def setattr(self, inode, attr, fields, fh, ctx):
+        return await self.getattr(inode)
 
     async def lookup(self, parent_inode, name, ctx=None):
         log.debug(f"lookup({parent_inode}, {name}, {ctx})")
@@ -313,6 +330,17 @@ class SolidFs(pyfuse3.Operations):
     async def access(self, inode, mode, ctx):
         log.debug(f"access({inode}, {mode}, {ctx})")
         return True
+
+    async def create(self, parent_inode, name, mode, flags, ctx):
+        log.debug(f"create({parent_inode}, {name}, {mode}, {flags:b}, {ctx})")
+        parent_folder_data = self._resource_info_link_wrapper.get(parent_inode, from_info_cache=True)
+        parent_url = parent_folder_data.url
+        target_url = UriWrapper(parent_url).child(name).uri
+        self._resource_info_link_wrapper.create(target_url, parent_url)
+        target_inode = self._resource_info_link_wrapper.get_inode(target_url)
+        entry = await self.getattr(target_inode)
+
+        return (pyfuse3.FileInfo(fh=entry.st_ino), entry)
 
     async def write(self, fh, offset, buf):
         log.debug(f"write({fh}, {offset}, {buf})")

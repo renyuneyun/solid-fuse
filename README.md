@@ -62,11 +62,13 @@ SolidFUSE use [`solid-file-python`](https://github.com/twonote/solid-file-python
     - [ ] Automatically update cache After modification
     - [ ] Automatically update cache by time-out
 - [x] Edit files
-- [ ] Create files
+- [x] Create files
+    - [ ] Update local cache after combined writing (e.g. after `echo 1 > file.txt`, but not after `touch file.txt`)
 - [ ] Delete files
 - [ ] Show linked files
     - [ ] ACL
     - [ ] Meta
+- [ ] Show time
 
 Note: creating linked files is impossible for a filesystem, because this notion does not exist.
 
