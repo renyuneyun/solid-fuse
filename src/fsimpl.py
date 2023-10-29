@@ -9,7 +9,7 @@ from pathlib import PurePath
 
 import mimetypes
 
-from solid.auth import Auth
+from solid.auth import Auth, OidcAuth
 from solid.solid_api import SolidAPI, WriteOptions
 
 from solid.solid_api import FolderData
@@ -131,9 +131,13 @@ class ResourceLinkHelper:
 
 class ResourceInfoLinkWrapper:
     def __init__(self, pod, idp, username, password):
-        auth = Auth()
+        if username and password:
+            auth = Auth()
+            auth.login(idp, username, password)
+        else:
+            auth = OidcAuth()
+            auth.login(idp)
         self._api = SolidAPI(auth)
-        auth.login(idp, username, password)
         self._resource_link_helper = ResourceLinkHelper()
         self._container_info_cache = ResourceInfoCache()
         self._resource_info_cache = ResourceInfoCache()

@@ -10,8 +10,10 @@ readme = "README.md"
 python = "^3.11"
 pyfuse3 = "^3.3.0"
 trio = "^0.22.2"
-solid-file = "0.1.1"
+solid-file = {git = "https://github.com/renyuneyun/solid-file-python.git", rev = "pin/working-oidc"}
 tomlkit = "^0.12.1"
+solid-oidc-client = "^0.0.4"
+flask = "^3.0.0"
 
 
 [tool.poetry.group.dev.dependencies]

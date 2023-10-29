@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 import tomlkit
 
+from typing import Optional
+
 
 @dataclass
 class Config:
     pod: str
     idp: str
-    username: str
-    password: str
+    username: Optional[str]
+    password: Optional[str]
 
 
 def load_config(filepath):

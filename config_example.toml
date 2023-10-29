@@ -1,4 +1,4 @@
 pod = "https://solidos.solidcommunity.net/"
 idp = "https://solidcommunity.net"
-username = "your-user-name"
-password = "your-password"
+# username = "your-user-name"  # Keep this field empty or commented out to use Solid OIDC for log-in
+# password = "your-password"  # Keep this field empty or commented out to use Solid OIDC for log-in
