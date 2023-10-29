@@ -31,8 +31,6 @@ There is an example configuration file `config_example.toml` with the source. Yo
 
 > I would recommend to copy it to `config.toml`, which is ignore by git as specified in `.gitignore`, in case you want to do some commits
 
-At the moment, you have to log-in. Due to [limitations of `solid-file-python`](https://github.com/twonote/solid-file-python/pull/33), it only supports NSS.
-
 ### Run application
 
 Assume your configuration file is named `config.toml`, and you want to mount it under `/mnt/solid`, run the following command:
@@ -45,7 +43,7 @@ poetry run src/solid-fuse.py config.toml /mnt/solid
 
 This project is in early-stage. Breaking changes may be expected with every update.
 
-SolidFUSE use [`solid-file-python`](https://github.com/twonote/solid-file-python) for authentication and performing operations (`:)`). However, there are lots of things that is yet to implement (`:(`). At the moment, SolidFUSE only supports NSS, due to the lack of an implementation of DPoP in Python (see [this issue](https://github.com/twonote/solid-file-python/pull/33)).
+SolidFUSE use [`solid-file-python`](https://github.com/twonote/solid-file-python) for authentication and performing operations. Currently, we use a [custom implementation](https://github.com/renyuneyun/solid-file-python) that integrated [solid-oidc-client](https://pypi.org/project/solid-oidc-client/) to support any Solid server (NSS, CSS, ESS). This will be changed after upstream has made the support official (see [this issue](https://github.com/twonote/solid-file-python/pull/33)).
 
 ## Features / TODOs
 
@@ -59,7 +57,7 @@ SolidFUSE use [`solid-file-python`](https://github.com/twonote/solid-file-python
     - [x] Text files
     - [x] Binary files
 - [ ] Update cache
-    - [ ] Automatically update cache After modification
+    - [ ] Automatically update cache after modification
     - [ ] Automatically update cache by time-out
 - [x] Edit files
 - [x] Create files
@@ -77,7 +75,8 @@ Note: creating linked files is impossible for a filesystem, because this notion 
 - [x] Log-in / Authenticate
 - [ ] No-log-in support (public resources)
 - [ ] Map (current user) permission as POSIX permission (no `chmod` support)
-- [ ] Change backend to support Solid servers other than NSS
+- [x] Change backend to support Solid servers other than NSS
+    - [ ] Refresh token after expiration (an [upstream issue](https://pypi.org/project/solid-oidc-client/))
 
 ### Performance
 
