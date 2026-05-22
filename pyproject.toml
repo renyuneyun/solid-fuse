@@ -9,11 +9,12 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 pyfuse3 = "^3.3.0"
-trio = "^0.22.2"
-solid-file = {git = "https://github.com/renyuneyun/solid-file-python.git", rev = "pin/working-oidc"}
+trio = ">=0.24.0"
+solid-file = {git = "https://github.com/renyuneyun/solid-file-python.git", rev = "pin/for-solid-fuse"}
 tomlkit = "^0.12.1"
 solid-oidc-client = "^0.0.4"
 flask = "^3.0.0"
+httpx = ">=0.27.0"
 
 
 [tool.poetry.group.dev.dependencies]
