@@ -1153,11 +1153,15 @@ develop = false
 httpx = "*"
 rdflib = "*"
 
+[package.extras]
+css = ["jwcrypto", "solid-oidc-client"]
+oidc = ["flask", "solid-oidc-client"]
+
 [package.source]
 type = "git"
 url = "https://github.com/renyuneyun/solid-file-python.git"
-reference = "pin/for-solid-fuse"
-resolved_reference = "1209fa99882bd469c39f04fba087141b009e3620"
+reference = "acdc8b5"
+resolved_reference = "acdc8b579fd6f23432e35c5f8328a0a3e55772fa"
 
 [[package]]
 name = "solid-oidc-client"
@@ -1422,4 +1426,4 @@ dev = ["pytest", "setuptools"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "32cd0d00ba75dcc887d40389ef933321023594172e4cbc7e175e219bc4ba32c4"
+content-hash = "fd1eace9223d836599ba0aa650320782aa1461f4d327303156f40400d45f5c8c"

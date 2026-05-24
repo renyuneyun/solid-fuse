@@ -1,4 +1,9 @@
 pod = "https://solidos.solidcommunity.net/"
 idp = "https://solidcommunity.net"
-# username = "your-user-name"  # Keep this field empty or commented out to use Solid OIDC for log-in
-# password = "your-password"  # Keep this field empty or commented out to use Solid OIDC for log-in
+
+# auth = "css"   # OAuth2 client credentials + DPoP (default when username/password set)
+# auth = "nss"   # Legacy NSS username/password login
+# auth = "oidc"  # Browser-based OIDC flow (default when no username/password)
+
+# username = "your-user-name"  # For css: client_id; for nss: username
+# password = "your-password"   # For css: client_secret; for nss: password

@@ -10,7 +10,7 @@ readme = "README.md"
 python = "^3.11"
 pyfuse3 = "^3.3.0"
 trio = ">=0.24.0"
-solid-file = {git = "https://github.com/renyuneyun/solid-file-python.git", rev = "pin/for-solid-fuse"}
+solid-file = {git = "https://github.com/renyuneyun/solid-file-python.git", rev = "acdc8b5"}
 tomlkit = "^0.12.1"
 solid-oidc-client = "^0.0.4"
 flask = "^3.0.0"

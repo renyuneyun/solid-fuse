@@ -10,6 +10,7 @@ class Config:
     idp: str
     username: Optional[str]
     password: Optional[str]
+    auth: Optional[str]  # "css" (default), "nss", or "oidc"
 
 
 def load_config(filepath):
@@ -20,5 +21,6 @@ def load_config(filepath):
             cfg_f.get('idp'),
             cfg_f.get('username'),
             cfg_f.get('password'),
+            cfg_f.get('auth'),
             )
         return config

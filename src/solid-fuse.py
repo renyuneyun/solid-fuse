@@ -61,7 +61,8 @@ def main():
     config = load_config(options.config)
 
     testfs = SolidFs(config.pod,
-                     config.idp, config.username, config.password)
+                     config.idp, config.username, config.password,
+                     config.auth)
     fuse_options = set(pyfuse3.default_options)
     fuse_options.add('fsname=solidfuse')
     fuse_options.discard('default_permissions')
@@ -70,7 +71,7 @@ def main():
     pyfuse3.init(testfs, options.mountpoint, fuse_options)
     try:
         trio.run(pyfuse3.main)
-    except:
+    except BaseException:
         pyfuse3.close(unmount=True)
         raise
 

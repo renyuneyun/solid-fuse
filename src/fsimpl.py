@@ -9,7 +9,13 @@ from pathlib import PurePath
 
 import mimetypes
 
-from solid.auth import Auth, OidcAuth
+from solid.auth import Auth
+from solid.css_auth import CssAuth
+from solid.oidc_auth import OidcAuth
+
+AUTH_CSS  = 'css'
+AUTH_NSS  = 'nss'
+AUTH_OIDC = 'oidc'
 from solid.solid_api import SolidAPI, WriteOptions
 
 from solid.solid_api import FolderData
@@ -130,13 +136,16 @@ class ResourceLinkHelper:
 
 
 class ResourceInfoLinkWrapper:
-    def __init__(self, pod, idp, username, password):
-        if username and password:
-            auth = Auth()
-            auth.login(idp, username, password)
-        else:
+    def __init__(self, pod, idp, username, password, auth_type=None):
+        if auth_type == AUTH_OIDC or (not username and not password):
             auth = OidcAuth()
             auth.login(idp)
+        elif auth_type == AUTH_NSS:
+            auth = Auth()
+            auth.login(idp, username, password)
+        else:  # AUTH_CSS (default when credentials are provided)
+            auth = CssAuth()
+            auth.login(idp, username, password)
         self._api = SolidAPI(auth)
         self._resource_link_helper = ResourceLinkHelper()
         self._container_info_cache = ResourceInfoCache()
@@ -158,7 +167,6 @@ class ResourceInfoLinkWrapper:
             inode = self._resource_link_helper.new_inode()
             self._resource_link_helper.insert(sub.url, inode)
             self._resource_info_cache.put(sub.url, sub)
-            self.retrieve_and_cache_resource(sub.url)
 
     def retrieve_and_cache_resource(self, uri):
         log.debug(f"retrieve_and_cache_resource({uri})")
@@ -206,9 +214,12 @@ class ResourceInfoLinkWrapper:
         return self._resource_link_helper.get_inode_from_uri(uri)
 
     def gen_inode_for_uri(self, uri):
-        inode = self._resource_link_helper.new_inode()
-        self._resource_link_helper.insert(uri, inode)
-        return inode
+        try:
+            return self._resource_link_helper.get_inode_from_uri(uri)
+        except InternalMappingNotFoundException:
+            inode = self._resource_link_helper.new_inode()
+            self._resource_link_helper.insert(uri, inode)
+            return inode
 
     def has_inode(self, inode):
         return self._resource_link_helper.has_inode(inode)
@@ -221,6 +232,7 @@ class ResourceInfoLinkWrapper:
         uri = self._resource_link_helper.get_uri(inode, fh, uri)
         mtype, encoding = mimetypes.guess_type(uri)
         self._api.put_file(uri, data, mtype)
+        self._resource_contant_cache.put(uri, data)
 
     def create(self, uri, parent_url):
         if UriWrapper(uri).is_container():
@@ -231,13 +243,15 @@ class ResourceInfoLinkWrapper:
         if response.is_error:
             raise RemoteOperationFailureException()
         self.retrieve_and_cache(parent_url, is_container=True)
+        if not UriWrapper(uri).is_container():
+            self._resource_contant_cache.put(uri, b'')
 
 
 class SolidFs(pyfuse3.Operations):
-    def __init__(self, pod, idp=None, username=None, password=None):
+    def __init__(self, pod, idp=None, username=None, password=None, auth_type=None):
         super(SolidFs, self).__init__()
         self._resource_info_link_wrapper = ResourceInfoLinkWrapper(
-            pod, idp, username, password)
+            pod, idp, username, password, auth_type)
 
     async def getattr(self, inode, ctx=None):
         log.debug(f"getattr({inode}, {ctx})")
@@ -283,6 +297,12 @@ class SolidFs(pyfuse3.Operations):
         target_url = UriWrapper(parent_folder_data.url).child(name).uri
         try:
             target_inode = self._resource_info_link_wrapper.get_inode(target_url)
+            return await self.getattr(target_inode)
+        except InternalMappingNotFoundException:
+            pass
+        # Directories are stored with a trailing slash; try that variant too
+        try:
+            target_inode = self._resource_info_link_wrapper.get_inode(target_url + '/')
             return await self.getattr(target_inode)
         except InternalMappingNotFoundException:
             raise pyfuse3.FUSEError(errno.ENOENT)
@@ -348,10 +368,10 @@ class SolidFs(pyfuse3.Operations):
 
     async def write(self, fh, offset, buf):
         log.debug(f"write({fh}, {offset}, {buf})")
-        # try:
-        data = self._resource_info_link_wrapper.get_resource(fh=fh)
-        # except InternalMappingNotFoundException:
-        #     data = b''
+        try:
+            data = self._resource_info_link_wrapper.get_resource(fh=fh)
+        except (InternalMappingNotFoundException, KeyError):
+            data = b''
 
         data = data[:offset] + buf + data[offset+len(buf):]
 
